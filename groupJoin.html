@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Group Join</title>
+</head>
+<body>
+    <h2>Join a Group or Add Users by ID</h2>
+
+    <!-- Plus Button for Joining Groups -->
+    <button id="join-group" onclick="showGroupJoin()">+</button>
+
+    <!-- Form to Add User by Encrypted ID -->
+    <div id="add-user" style="display:none;">
+        <input type="text" id="user-id" placeholder="Enter User ID to Add">
+        <button onclick="addUser()">Add User</button>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-app.js";
+        import { getAuth } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCLsHvtjf4s31KQHRPGiHn95-XQEkiM95Q",
+            authDomain: "chat-app-195d0.firebaseapp.com",
+            projectId: "chat-app-195d0",
+            storageBucket: "chat-app-195d0.appspot.com",
+            messagingSenderId: "892853314125",
+            appId: "1:892853314125:web:87b3130047c62f81f5f204"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth();
+
+        // Show group join form
+        window.showGroupJoin = function() {
+            document.getElementById("add-user").style.display = "block";  // Show user ID input form
+        };
+
+        // Add User to Group by ID
+        window.addUser = async function() {
+            const userId = document.getElementById('user-id').value;
+
+            if (userId === "") {
+                alert("Please enter a user ID.");
+                return;
+            }
+
+            // Add user to the group (you can customize this logic based on your group structure)
+            const userRef = doc(db, "users", userId); // Assuming user data is stored under 'users' collection
+            const userDoc = await getDoc(userRef);
+
+            if (userDoc.exists()) {
+                // Add this user to the current group (e.g., add them to the group members)
+                alert(`User with ID: ${userId} added to the group!`);
+            } else {
+                alert("User ID not found.");
+            }
+        };
+    </script>
+</body>
+</html>

@@ -42,8 +42,8 @@
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
                 const user = userCredential.user;
                 alert("Logged in successfully!");
-                // Redirect to the chat page
-                window.location.href = "chat.html";
+                // Redirect to group join screen
+                window.location.href = "groupJoin.html";
             } catch (error) {
                 alert("Error logging in: " + error.message);
             }
@@ -55,8 +55,8 @@
                 const userCredential = await signInAnonymously(auth);
                 const user = userCredential.user;
                 alert("Logged in anonymously!");
-                // Redirect to the chat page
-                window.location.href = "chat.html";
+                // Redirect to group join screen
+                window.location.href = "groupJoin.html";
             } catch (error) {
                 alert("Error logging in anonymously: " + error.message);
             }
