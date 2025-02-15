@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App Login</title>
+</head>
+<body>
+    <h2>Login to Chat</h2>
+    <input type="text" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Password">
+    <button onclick="login()">Login</button>
+    <button onclick="signup()">Sign Up</button>
+    <button onclick="anonymousLogin()">Login Anonymously</button>
+
+    <script type="module">
+        // Import Firebase SDKs
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-auth.js";
+
+        // Your Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCLsHvtjf4s31KQHRPGiHn95-XQEkiM95Q",
+            authDomain: "chat-app-195d0.firebaseapp.com",
+            projectId: "chat-app-195d0",
+            storageBucket: "chat-app-195d0.appspot.com",
+            messagingSenderId: "892853314125",
+            appId: "1:892853314125:web:87b3130047c62f81f5f204"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth();
+
+        // Sign up function
+        window.signup = function() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            createUserWithEmailAndPassword(auth, email, password)
+                .then(() => alert("Account Created!"))
+                .catch(error => alert(error.message));
+        };
+
+        // Login function
+        window.login = function() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            signInWithEmailAndPassword(auth, email, password)
+                .then(() => window.location.href = "chat.html")
+                .catch(error => alert(error.message));
+        };
+
+        // Anonymous login function
+        window.anonymousLogin = function() {
+            signInAnonymously(auth)
+                .then(() => window.location.href = "chat.html")
+                .catch(error => alert(error.message));
+        };
+    </script>
+</body>
+</html>
