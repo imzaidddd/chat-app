@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel</title>
+</head>
+<body>
+    <h2>Admin Panel</h2>
+
+    <!-- Admin Login -->
+    <div id="admin-login">
+        <h3>Admin Login</h3>
+        <input type="text" id="admin-username" placeholder="Enter username" />
+        <input type="password" id="admin-password" placeholder="Enter password" />
+        <button onclick="adminLogin()">Login</button>
+    </div>
+
+    <!-- Admin Dashboard (Visible after login) -->
+    <div id="admin-dashboard" style="display:none;">
+        <h3>Welcome, Admin</h3>
+
+        <!-- Announcements -->
+        <h3>Post an Announcement</h3>
+        <textarea id="announcement-text" placeholder="Write announcement"></textarea>
+        <button onclick="postAnnouncement()">Post Announcement</button>
+
+        <h3>Create New Admin Account</h3>
+        <input type="text" id="new-admin-username" placeholder="Enter new admin username" />
+        <input type="password" id="new-admin-password" placeholder="Enter new admin password" />
+        <button onclick="createNewAdmin()">Create New Admin</button>
+
+        <h3>Change Admin Password</h3>
+        <input type="password" id="new-password" placeholder="Enter new password" />
+        <button onclick="changePassword()">Change Password</button>
+
+        <h3>Create a New Group</h3>
+        <input type="text" id="new-group-name" placeholder="Enter group name">
+        <button onclick="createGroup()">Create Group</button>
+
+        <h3>Manage Groups</h3>
+        <div id="group-list"></div>
+
+        <button onclick="logout()">Logout</button>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-app.js";
+        import { getAuth, signOut, createUserWithEmailAndPassword, updatePassword } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDocs, query, deleteDoc, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCLsHvtjf4s31KQHRPGiHn95-XQEkiM95Q",
+            authDomain: "chat-app-195d0.firebaseapp.com",
+            projectId: "chat-app-195d0",
+            storageBucket: "chat-app-195d0.appspot.com",
+            messagingSenderId: "892853314125",
+            appId: "1:892853314125:web:87b3130047c62f81f5f204"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth();
+        const db = getFirestore();
+
+        let currentAdmin = null; // Admin tracking
+
+        // Admin Login function
+        window.adminLogin = function() {
+            const username = document.getElementById('admin-username').value;
+            const password = document.getElementById('admin-password').value;
+
+            if (username === "1" && password === "1") {
+                currentAdmin = { username: "1" };
+                document.getElementById('admin-login').style.display = "none";  // Hide login
+                document.getElementById('admin-dashboard').style.display = "block";  // Show admin dashboard
+                loadGroups(); // Load groups on login
+            } else {
+                alert("Invalid login credentials.");
+            }
+        };
+
+        // Post Announcement
+        window.postAnnouncement = async function() {
+            const announcement = document.getElementById('announcement-text').value.trim();
+            if (announcement === "") return;
+
+            await addDoc(collection(db, "announcements"), {
+                text: announcement,
+                timestamp: new Date(),
+                admin: currentAdmin.username
+            });
+
+            alert("Announcement posted!");
+        };
+
+        // Create New Admin Account
+        window.createNewAdmin = async function() {
+            const newAdminUsername = document.getElementById('new-admin-username').value.trim();
+            const newAdminPassword = document.getElementById('new-admin-password').value.trim();
+
+            if (newAdminUsername === "" || newAdminPassword === "") return;
+
+            // For now, we're adding the admin data manually. Ideally, you'd create a special collection for admin users.
+            const newAdmin = { username: newAdminUsername, password: newAdminPassword }; // Simplified approach for this example
+            await setDoc(doc(db, "admins", newAdminUsername), newAdmin);
+
+            alert("New admin created!");
+        };
+
+        // Change Admin Password
+        window.changePassword = async function() {
+            const newPassword = document.getElementById('new-password').value.trim();
+            if (newPassword === "") return;
+
+            try {
+                const user = auth.currentUser;
+                if (user) {
+                    await updatePassword(user, newPassword);
+                    alert("Password changed successfully!");
+                }
+            } catch (error) {
+                alert("Error changing password: " + error.message);
+            }
+        };
+
+        // Create a new group
+        window.createGroup = async function() {
+            const groupName = document.getElementById('new-group-name').value.trim();
+            if (groupName === "") return;
+
+            await addDoc(collection(db, "groups"), {
+                name: groupName,
+                createdAt: new Date()
+            });
+
+            alert("Group created successfully!");
+            loadGroups(); // Reload groups
+        };
+
+        // Load and display groups
+        async function loadGroups() {
+            const groupsQuery = await getDocs(collection(db, "groups"));
+            const groupListDiv = document.getElementById('group-list');
+            groupListDiv.innerHTML = "";  // Reset group list
+
+            groupsQuery.forEach(doc => {
+                const group = doc.data();
+                const groupElement = document.createElement("div");
+                groupElement.innerHTML = `
+                    <p>${group.name}</p>
+                    <button onclick="deleteGroup('${doc.id}')">Delete Group</button>
+                `;
+                groupListDiv.appendChild(groupElement);
+            });
+        }
+
+        // Delete a group
+        window.deleteGroup = async function(groupId) {
+            try {
+                await deleteDoc(doc(db, "groups", groupId));
+                alert("Group deleted successfully!");
+                loadGroups();  // Refresh the group list
+            } catch (error) {
+                alert("Error deleting group: " + error.message);
+            }
+        };
+
+        // Logout function
+        window.logout = function() {
+            signOut(auth).then(() => {
+                window.location.href = "index.html";  // Redirect to login page
+            });
+        };
+    </script>
+</body>
+</html>

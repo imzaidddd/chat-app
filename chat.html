@@ -3,21 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat Room</title>
+    <title>Group Chat</title>
 </head>
 <body>
-    <h2>Welcome to the Chat Room</h2>
-    <div id="chat-box"></div>
-    
-    <input type="text" id="message" placeholder="Type a message">
-    <button onclick="sendMessage()">Send</button>
+    <h2>Group Chat</h2>
 
-    <button onclick="logout()">Logout</button>
+    <!-- Announcement Section (Only Admin can add) -->
+    <div id="announcement-section" style="display:none;">
+        <h3>Announcement</h3>
+        <div id="announcement-text"></div>
+        <textarea id="announcement-input" placeholder="Add your announcement here..."></textarea>
+        <button onclick="postAnnouncement()">Post Announcement</button>
+    </div>
+
+    <!-- Join Group -->
+    <div id="group-selector">
+        <h3>Join a Group</h3>
+        <select id="group-list" onchange="joinGroup(event)">
+            <option value="">Select a group</option>
+        </select>
+        <button onclick="leaveGroup()">Leave Group</button>
+    </div>
+
+    <!-- Chat Box -->
+    <div id="chat-box" style="display:none;">
+        <h3>Group Chat</h3>
+        <div id="messages"></div>
+        <textarea id="message-input" placeholder="Type your message..."></textarea>
+        <button onclick="sendMessage()">Send</button>
+    </div>
+
+    <div id="group-members" style="display:none;">
+        <h3>Group Members</h3>
+        <div id="members-list"></div>
+    </div>
+
+    <!-- Admin Controls for Managing Groups -->
+    <div id="admin-group-controls" style="display:none;">
+        <h3>Manage Groups</h3>
+        <button onclick="createGroup()">Create New Group</button>
+        <button onclick="deleteGroup()">Delete Group</button>
+    </div>
+
+    <div id="admin-controls" style="display:none;">
+        <h3>Admin Controls</h3>
+        <button onclick="kickUser()">Kick User</button>
+        <button onclick="banUser()">Ban User</button>
+    </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, getDoc, doc } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-firestore.js";
+        import { getAuth } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-auth.js";
+        import { getFirestore, collection, addDoc, query, onSnapshot, orderBy, doc, setDoc, deleteDoc, getDocs, updateDoc } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCLsHvtjf4s31KQHRPGiHn95-XQEkiM95Q",
@@ -31,52 +68,195 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth();
         const db = getFirestore();
-        const chatBox = document.getElementById("chat-box");
 
-        // Check if the user is logged in
-        onAuthStateChanged(auth, (user) => {
-            if (!user) {
-                window.location.href = "index.html"; // Redirect to login page
+        let currentGroup = null;
+        let currentUser = null;
+
+        // Check if the logged-in user is an admin
+        async function checkIfAdmin() {
+            const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
+            if (userDoc.exists()) {
+                currentUser = userDoc.data();
+                if (currentUser.username === "admin") {
+                    // Show admin controls and announcements section
+                    document.getElementById('admin-group-controls').style.display = "block";
+                    document.getElementById('announcement-section').style.display = "block";
+                    document.getElementById('admin-controls').style.display = "block";
+                }
             }
-        });
+        }
 
-        // Send message to Firestore
+        // Post an announcement (admin only)
+        window.postAnnouncement = async function() {
+            const announcementText = document.getElementById('announcement-input').value.trim();
+            if (announcementText === "") return;
+
+            // Post the announcement in the Firestore collection
+            await setDoc(doc(db, "announcements", "latest"), {
+                text: announcementText,
+                timestamp: new Date()
+            });
+
+            alert("Announcement posted!");
+        };
+
+        // Load the latest announcement
+        async function loadAnnouncement() {
+            const announcementDoc = await getDoc(doc(db, "announcements", "latest"));
+            if (announcementDoc.exists()) {
+                const announcement = announcementDoc.data();
+                document.getElementById('announcement-text').textContent = announcement.text;
+            }
+        }
+
+        // Join a selected group
+        window.joinGroup = async function(event) {
+            currentGroup = event.target.value;
+            if (currentGroup === "") return;
+
+            // Show the chat box and load messages
+            document.getElementById('chat-box').style.display = "block";
+            document.getElementById('group-members').style.display = "block";
+
+            const groupMessagesQuery = query(collection(db, "groups", currentGroup, "messages"), orderBy("timestamp", "asc"));
+            onSnapshot(groupMessagesQuery, (snapshot) => {
+                const messagesDiv = document.getElementById('messages');
+                messagesDiv.innerHTML = "";
+                snapshot.forEach(doc => {
+                    const msg = doc.data();
+                    const msgElement = document.createElement("p");
+                    msgElement.textContent = msg.text;
+                    messagesDiv.appendChild(msgElement);
+                });
+            });
+
+            // Add user to the group
+            await addDoc(collection(db, "groups", currentGroup, "members"), {
+                userId: auth.currentUser.uid,
+                joinedAt: new Date()
+            });
+
+            loadGroupMembers();
+        };
+
+        // Send a message
         window.sendMessage = async function() {
-            const messageInput = document.getElementById("message");
-            const messageText = messageInput.value.trim();
-
+            const messageText = document.getElementById('message-input').value.trim();
             if (messageText === "") return;
 
-            // Add message to Firestore
-            await addDoc(collection(db, "messages"), {
+            await addDoc(collection(db, "groups", currentGroup, "messages"), {
                 text: messageText,
                 timestamp: new Date(),
                 userId: auth.currentUser.uid
             });
 
-            messageInput.value = ""; // Clear input field
+            document.getElementById('message-input').value = "";
         };
 
-        // Listen for new messages in real-time
-        const q = query(collection(db, "messages"), orderBy("timestamp", "asc"));
-        onSnapshot(q, async (snapshot) => {
-            chatBox.innerHTML = ""; // Clear chat box
-            for (const docSnapshot of snapshot.docs) {
-                const msg = docSnapshot.data();
-                const userDoc = await getDoc(doc(db, "users", msg.userId));
-                const username = userDoc.exists() ? userDoc.data().username : "Unknown User";
-                
-                const messageElement = document.createElement("p");
-                messageElement.textContent = `${username}: ${msg.text}`;
-                chatBox.appendChild(messageElement);
-            }
-        });
+        // Load group members
+        async function loadGroupMembers() {
+            const membersQuery = await getDocs(collection(db, "groups", currentGroup, "members"));
+            const membersDiv = document.getElementById('members-list');
+            membersDiv.innerHTML = "";  // Clear current members list
 
-        // Logout function
-        window.logout = function() {
-            signOut(auth).then(() => {
-                window.location.href = "index.html"; // Redirect to login
+            membersQuery.forEach(doc => {
+                const member = doc.data();
+                const memberElement = document.createElement("div");
+                memberElement.innerHTML = `<p>User: ${member.userId}</p>`;
+                membersDiv.appendChild(memberElement);
             });
+        }
+
+        // Leave group
+        window.leaveGroup = async function() {
+            if (!currentGroup) return;
+
+            // Remove user from the group
+            const memberQuery = await getDocs(collection(db, "groups", currentGroup, "members"));
+            memberQuery.forEach(doc => {
+                if (doc.data().userId === auth.currentUser.uid) {
+                    deleteDoc(doc.ref);
+                }
+            });
+
+            document.getElementById('chat-box').style.display = "none";
+            document.getElementById('group-members').style.display = "none";
+            currentGroup = null;
+        };
+
+        // Kick user (admin feature)
+        window.kickUser = async function() {
+            const userToKick = prompt("Enter the user ID to kick:");
+            if (!userToKick) return;
+
+            const membersQuery = await getDocs(collection(db, "groups", currentGroup, "members"));
+            membersQuery.forEach(async (doc) => {
+                if (doc.data().userId === userToKick) {
+                    await deleteDoc(doc.ref); // Remove user from the group
+                    alert(`User ${userToKick} has been kicked.`);
+                }
+            });
+        };
+
+        // Ban user (admin feature)
+        window.banUser = async function() {
+            const userToBan = prompt("Enter the user ID to ban:");
+            if (!userToBan) return;
+
+            // Add user to a banned list (could be in Firestore as a new collection, etc.)
+            alert(`User ${userToBan} has been banned from the group.`);
+        };
+
+        // Create a new group (admin only)
+        window.createGroup = async function() {
+            const groupName = prompt("Enter the group name:");
+            if (!groupName) return;
+
+            // Create the group in Firestore
+            await setDoc(doc(db, "groups", groupName), {
+                createdAt: new Date(),
+                adminId: auth.currentUser.uid
+            });
+
+            alert(`Group "${groupName}" created successfully.`);
+        };
+
+        // Delete a group (admin only)
+        window.deleteGroup = async function() {
+            const groupName = prompt("Enter the group name to delete:");
+            if (!groupName) return;
+
+            // Check if the group exists
+            const groupDoc = await getDoc(doc(db, "groups", groupName));
+            if (!groupDoc.exists()) {
+                alert("Group not found.");
+                return;
+            }
+
+            // Delete the group and all its members and messages
+            await deleteDoc(doc(db, "groups", groupName));
+            
+            // Delete messages
+            const messagesQuery = query(collection(db, "groups", groupName, "messages"));
+            const messagesSnapshot = await getDocs(messagesQuery);
+            messagesSnapshot.forEach(async (messageDoc) => {
+                await deleteDoc(messageDoc.ref);
+            });
+
+            // Delete members
+            const membersQuery = query(collection(db, "groups", groupName, "members"));
+            const membersSnapshot = await getDocs(membersQuery);
+            membersSnapshot.forEach(async (memberDoc) => {
+                await deleteDoc(memberDoc.ref);
+            });
+
+            alert(`Group "${groupName}" and all related data have been deleted.`);
+        };
+
+        // Load the announcement and check for admin
+        window.onload = function() {
+            loadAnnouncement();
+            checkIfAdmin();
         };
     </script>
 </body>
