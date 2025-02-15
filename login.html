@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+</head>
+<body>
+    <h2>Login to Chat App</h2>
+
+    <!-- Login Form -->
+    <div id="login-form">
+        <input type="email" id="email" placeholder="Enter your email" required><br>
+        <input type="password" id="password" placeholder="Enter your password" required><br>
+        <button onclick="login()">Login</button>
+        <p>or</p>
+        <button onclick="loginAnonymously()">Login Anonymously</button>
+        <p>Don't have an account? <a href="signup.html">Sign Up</a></p>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-auth.js";
+        const firebaseConfig = {
+            apiKey: "AIzaSyCLsHvtjf4s31KQHRPGiHn95-XQEkiM95Q",
+            authDomain: "chat-app-195d0.firebaseapp.com",
+            projectId: "chat-app-195d0",
+            storageBucket: "chat-app-195d0.appspot.com",
+            messagingSenderId: "892853314125",
+            appId: "1:892853314125:web:87b3130047c62f81f5f204"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth();
+
+        // Login with email and password
+        window.login = async function() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+                alert("Logged in successfully!");
+                // Redirect to the chat page
+                window.location.href = "chat.html";
+            } catch (error) {
+                alert("Error logging in: " + error.message);
+            }
+        };
+
+        // Login anonymously
+        window.loginAnonymously = async function() {
+            try {
+                const userCredential = await signInAnonymously(auth);
+                const user = userCredential.user;
+                alert("Logged in anonymously!");
+                // Redirect to the chat page
+                window.location.href = "chat.html";
+            } catch (error) {
+                alert("Error logging in anonymously: " + error.message);
+            }
+        };
+    </script>
+</body>
+</html>
