@@ -4,6 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Group Join</title>
+    <style>
+        /* Style for displaying the user ID at the bottom right corner */
+        #user-id-display {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+    </style>
 </head>
 <body>
     <h2>Join a Group or Add Users by ID</h2>
@@ -16,6 +29,9 @@
         <input type="text" id="user-id" placeholder="Enter User ID to Add">
         <button onclick="addUser()">Add User</button>
     </div>
+
+    <!-- Display User ID at the Bottom Right -->
+    <div id="user-id-display"></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-app.js";
@@ -35,6 +51,11 @@
         const db = getFirestore(app);
         const auth = getAuth();
 
+        // Get User ID from URL and display it
+        const urlParams = new URLSearchParams(window.location.search);
+        const userId = urlParams.get('uid');
+        document.getElementById('user-id-display').textContent = `User ID: ${userId}`;
+
         // Show group join form
         window.showGroupJoin = function() {
             document.getElementById("add-user").style.display = "block";  // Show user ID input form
@@ -42,20 +63,20 @@
 
         // Add User to Group by ID
         window.addUser = async function() {
-            const userId = document.getElementById('user-id').value;
+            const userIdInput = document.getElementById('user-id').value;
 
-            if (userId === "") {
+            if (userIdInput === "") {
                 alert("Please enter a user ID.");
                 return;
             }
 
             // Add user to the group (you can customize this logic based on your group structure)
-            const userRef = doc(db, "users", userId); // Assuming user data is stored under 'users' collection
+            const userRef = doc(db, "users", userIdInput); // Assuming user data is stored under 'users' collection
             const userDoc = await getDoc(userRef);
 
             if (userDoc.exists()) {
                 // Add this user to the current group (e.g., add them to the group members)
-                alert(`User with ID: ${userId} added to the group!`);
+                alert(`User with ID: ${userIdInput} added to the group!`);
             } else {
                 alert("User ID not found.");
             }
