@@ -15,10 +15,9 @@
     <button onclick="logout()">Logout</button>
 
     <script type="module">
-        // Firebase App and Firestore import
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, getDoc, doc } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCLsHvtjf4s31KQHRPGiHn95-XQEkiM95Q",
@@ -60,14 +59,17 @@
 
         // Listen for new messages in real-time
         const q = query(collection(db, "messages"), orderBy("timestamp", "asc"));
-        onSnapshot(q, (snapshot) => {
+        onSnapshot(q, async (snapshot) => {
             chatBox.innerHTML = ""; // Clear chat box
-            snapshot.forEach((doc) => {
-                const msg = doc.data();
+            for (const docSnapshot of snapshot.docs) {
+                const msg = docSnapshot.data();
+                const userDoc = await getDoc(doc(db, "users", msg.userId));
+                const username = userDoc.exists() ? userDoc.data().username : "Unknown User";
+                
                 const messageElement = document.createElement("p");
-                messageElement.textContent = msg.text;
+                messageElement.textContent = `${username}: ${msg.text}`;
                 chatBox.appendChild(messageElement);
-            });
+            }
         });
 
         // Logout function
